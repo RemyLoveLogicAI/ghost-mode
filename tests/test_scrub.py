@@ -171,6 +171,26 @@ class RegressionTests(unittest.TestCase):
                        home=False, use_env=False)
         self.assertNotIn("and more", out)
 
+    def test_ansi_code_inside_a_token_does_not_hide_it(self):
+        out, _ = scrub("x ghp_\x1b[0m" + "Ab1Cd2Ef" * 5 + " y\n")
+        self.assertEqual(out, "x [REDACTED:github-token] y\n")
+
+    def test_ansi_colour_around_a_secret_is_kept(self):
+        out, _ = scrub("\x1b[31m" + GH + "\x1b[0m\n")
+        self.assertEqual(out, "\x1b[31m[REDACTED:github-token]\x1b[0m\n")
+
+    def test_basic_auth_header(self):
+        out, _ = scrub("Authorization: Basic dXNlcjpwYXNzd29yZDEyMw==\n")
+        self.assertNotIn("dXNlcjpw", out)
+
+    def test_plain_english_basic_is_not_flagged(self):
+        out, s = scrub("Basic configuration is required\n")
+        self.assertEqual((out, s.findings), ("Basic configuration is required\n", []))
+
+    def test_curl_user_password(self):
+        out, _ = scrub("curl -s -u admin:hunter2hunter2 https://x.example\n")
+        self.assertEqual(out, "curl -s -u admin:[REDACTED:curl-user] https://x.example\n")
+
     def test_quoted_value_with_spaces(self):
         out, _ = scrub('export DB_PASSWORD="my secret pass"\n')
         self.assertEqual(out, 'export DB_PASSWORD="[REDACTED:assignment]"\n')

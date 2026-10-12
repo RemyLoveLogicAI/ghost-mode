@@ -58,6 +58,13 @@ SECRET_RULES = (
     _rule("twilio-key", r"\bSK[0-9a-f]{32}\b"),
     _rule("jwt", r"\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"),
     _rule("bearer", r"(?i)\bBearer\s+([A-Za-z0-9._~+/=-]{16,})", 1, validate=plausible_secret),
+    _rule("basic-auth", r"(?i)\bAuthorization\s{0,8}[=:]\s{0,8}Basic\s+([A-Za-z0-9+/]{8,512}={0,2})", 1),
+    _rule(
+        "curl-user",
+        r"(?i)\bcurl\b[^\n|;&]{0,300}?\s(?:-u|--user)[ =]+[^\s:]{1,64}:(\S{4,256})",
+        1,
+        validate=plausible_secret,
+    ),
     _rule("url-password", r"\b[a-z][a-z0-9+.-]{0,31}://[^\s:/@]{1,128}:([^\s@/]{1,256})@", 1, validate=plausible_secret),
     _rule(
         "json-secret",

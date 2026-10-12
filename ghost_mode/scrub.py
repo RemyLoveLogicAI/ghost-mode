@@ -119,9 +119,14 @@ class Scrubber:
     # ---- everything else --------------------------------------------
 
     def _scrub_text(self, text: str) -> str:
-        spans = self._spans(text)
+        view, index = text, None
+        if "\x1b" in text:  # detect on the plain text so colour codes cannot split a secret
+            view, index = _strip_with_index(text)
+        spans = self._spans(view)
         if not spans:
             return text
+        if index is not None:  # map back, so the redaction also swallows codes inside the secret
+            spans = [(index[a], index[b - 1] + 1, n, k, sec) for a, b, n, k, sec in spans]
         out, cursor = [], 0
         for start, end, name, kind, secret in spans:
             out.append(text[cursor:start])
@@ -171,6 +176,20 @@ class Scrubber:
     def counts(self) -> Tuple[int, int]:
         secrets = sum(1 for f in self.findings if f.kind == "secret")
         return secrets, len(self.findings) - secrets
+
+
+def _strip_with_index(text: str) -> Tuple[str, List[int]]:
+    """Remove ANSI sequences; index[i] is the original offset of stripped char i."""
+    parts: List[str] = []
+    index: List[int] = []
+    pos = 0
+    for m in ANSI.finditer(text):
+        parts.append(text[pos:m.start()])
+        index.extend(range(pos, m.start()))
+        pos = m.end()
+    parts.append(text[pos:])
+    index.extend(range(pos, len(text)))
+    return "".join(parts), index
 
 
 def _continues_name(text: str, end: int) -> bool:

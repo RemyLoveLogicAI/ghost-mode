@@ -63,7 +63,8 @@ repos:
 Be honest about what this is: a pattern matcher, not a guarantee.
 
 - A secret with no recognisable format and no secret-like name is not caught. Use `--literal`.
-- Output is processed line by line, so a secret hard-wrapped across two lines by something else will slip through.
+- Output is processed line by line, so a secret hard-wrapped across two lines by something else will slip through. Values shorter than 8 characters are ignored by the assignment rules (use `--literal`).
+- Colour codes inside a secret are handled: detection runs on the plain text and the redaction swallows the codes.
 - `ghost run` waits for a newline before emitting, so interactive prompts without a trailing newline appear late.
 - Read the scrubbed output before you paste it.
 
