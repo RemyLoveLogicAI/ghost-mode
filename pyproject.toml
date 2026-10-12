@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ghost-mode"
+version = "0.1.0"
+description = "Strip secrets from terminal sessions so output is safe to paste into PRs and Slack."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["secrets", "redaction", "terminal", "cli", "security"]
+dependencies = []
+
+[project.scripts]
+ghost = "ghost_mode.cli:main"
+
+[tool.setuptools]
+packages = ["ghost_mode"]

@@ -1,0 +1,5 @@
+- id: ghost-scan
+  name: ghost scan (secrets)
+  entry: ghost scan
+  language: python
+  types: [text]
