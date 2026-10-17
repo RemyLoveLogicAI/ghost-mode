@@ -120,13 +120,6 @@ class DynamicTests(unittest.TestCase):
 
 
 class BehaviourTests(unittest.TestCase):
-    def test_hash_labels_stable_per_secret_and_distinct(self):
-        other = "ghp_" + "Z9y8X7w6" * 5
-        out, _ = scrub(f"{GH} {GH} {other}\n", hash_labels=True)
-        labels = [w for w in out.split() if w.startswith("[REDACTED")]
-        self.assertEqual(labels[0], labels[1])
-        self.assertNotEqual(labels[0], labels[2])
-
     def test_idempotent(self):
         text = f"A={GH}\nDB_PASSWORD=hunter2hunter2\n"
         once, _ = scrub(text)

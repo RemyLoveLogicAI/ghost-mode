@@ -31,7 +31,6 @@ Or run in place: `python3 -m ghost_mode ...`
 
 Flags shared by `scrub`, `scan`, `run` and `clip`:
 
-- `--hash` labels each redaction with a short per-run hash, so two equal secrets stay recognisable as equal (`[REDACTED:github-token:3f2a]`) without being reversible.
 - `--pii` also redacts email addresses.
 - `--strip-ansi` removes color and cursor escape codes first.
 - `--literal TEXT` always redacts that exact text (repeatable). Use it for customer names and internal hostnames.

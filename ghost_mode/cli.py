@@ -27,14 +27,12 @@ def _binary_lines(stream) -> Iterator[str]:
         yield _decode(raw)
 
 
-class _Failures:
-    """Unreadable inputs must fail closed: a missing file is not a clean file."""
-
-    count = 0
+_unreadable = 0  # unreadable inputs must fail closed: a missing file is not a clean file
 
 
 def _sources(paths: Sequence[str]) -> Iterator[tuple]:
     """Yield (display name, line iterator) for each input; "-" or no paths means stdin."""
+    global _unreadable
     for path in paths or ["-"]:
         if path == "-":
             yield "<stdin>", _binary_lines(sys.stdin.buffer)
@@ -43,7 +41,7 @@ def _sources(paths: Sequence[str]) -> Iterator[tuple]:
             fh = open(path, "rb")
         except OSError as exc:
             print(f"ghost: {path}: {exc.strerror}", file=sys.stderr)
-            _Failures.count += 1
+            _unreadable += 1
             continue
         with fh:
             yield path, _binary_lines(fh)
@@ -51,7 +49,6 @@ def _sources(paths: Sequence[str]) -> Iterator[tuple]:
 
 def _options(args: argparse.Namespace) -> Options:
     return Options(
-        hash_labels=args.hash,
         pii=args.pii,
         strip_ansi=args.strip_ansi,
         use_env=not args.no_env,
@@ -80,7 +77,7 @@ def cmd_scrub(args) -> int:
             _write(scrubber.scrub_line(line))
     if args.report:
         print(_summary(scrubber), file=sys.stderr)
-    return EXIT_USAGE if _Failures.count else 0
+    return EXIT_USAGE if _unreadable else 0
 
 
 def cmd_scan(args) -> int:
@@ -90,12 +87,12 @@ def cmd_scan(args) -> int:
         for line in lines:
             scrubber.scrub_line(line)
         for f in scrubber.findings:
-            if f.kind == "secret" or args.all:
+            if f.kind == "secret":
                 print(f"{name}:{f.line}: {f.rule}")
                 found += 1
     if found:
         return EXIT_FOUND
-    return EXIT_USAGE if _Failures.count else 0
+    return EXIT_USAGE if _unreadable else 0
 
 
 def cmd_rules(args) -> int:
@@ -199,7 +196,6 @@ def cmd_clip(args) -> int:
 
 def _common() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(add_help=False)
-    p.add_argument("--hash", action="store_true", help="label redactions with a short per-run hash so equal secrets stay correlatable")
     p.add_argument("--pii", action="store_true", help="also redact emails")
     p.add_argument("--strip-ansi", action="store_true", help="remove ANSI escape sequences")
     p.add_argument("--no-env", action="store_true", help="do not scrub values of secret-looking environment variables")
@@ -221,7 +217,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("scan", parents=[common], help="list findings as file:line: rule; exit 1 if any secret")
     p.add_argument("files", nargs="*")
-    p.add_argument("--all", action="store_true", help="include privacy findings in the exit status")
     p.set_defaults(func=cmd_scan)
 
     p = sub.add_parser("run", parents=[common], help="run a command and scrub its output live")
@@ -239,7 +234,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    _Failures.count = 0
+    global _unreadable
+    _unreadable = 0
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)

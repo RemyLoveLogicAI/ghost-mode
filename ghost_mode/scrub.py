@@ -1,7 +1,6 @@
 """Line-oriented scrubber with just enough state to cover PEM private keys."""
 from __future__ import annotations
 
-import hashlib
 import os
 import re
 from dataclasses import dataclass, field
@@ -22,7 +21,6 @@ from .rules import (
 
 @dataclass(frozen=True)
 class Options:
-    hash_labels: bool = False
     pii: bool = False
     strip_ansi: bool = False
     use_env: bool = True
@@ -54,7 +52,6 @@ class Scrubber:
                  home: Optional[str] = None):
         self.options = options or Options()
         self.findings: List[Finding] = []
-        self._salt = os.urandom(8)
         self._line = 0
         self._in_key = False
         self._rules = SECRET_RULES + (PII_RULES if self.options.pii else ())
@@ -130,7 +127,7 @@ class Scrubber:
         out, cursor = [], 0
         for start, end, name, kind, secret in spans:
             out.append(text[cursor:start])
-            out.append(self._label(name, secret))
+            out.append(self._label(name))
             self._record(name, kind)
             cursor = end
         out.append(text[cursor:])
@@ -162,13 +159,9 @@ class Scrubber:
             merged.append(span)
         return merged
 
-    def _label(self, name: str, secret: str) -> str:
-        if name == "home-path":
-            return "~"
-        if self.options.hash_labels:
-            digest = hashlib.sha256(self._salt + secret.encode("utf-8", "replace")).hexdigest()[:4]
-            return f"[REDACTED:{name}:{digest}]"
-        return f"[REDACTED:{name}]"
+    @staticmethod
+    def _label(name: str) -> str:
+        return "~" if name == "home-path" else f"[REDACTED:{name}]"
 
     def _record(self, rule: str, kind: str) -> None:
         self.findings.append(Finding(self._line, rule, kind))
